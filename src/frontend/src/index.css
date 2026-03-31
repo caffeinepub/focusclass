@@ -1,0 +1,131 @@
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap");
+
+@font-face {
+  font-family: "BricolageGrotesque";
+  src: url("/assets/fonts/BricolageGrotesque.woff2") format("woff2");
+  font-weight: 200 800;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Figtree";
+  src: url("/assets/fonts/Figtree.woff2") format("woff2");
+  font-weight: 300 900;
+  font-display: swap;
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --radius: 0.75rem;
+    /* Dark navy background #0a0f1e */
+    --background: 0.11 0.04 262;
+    --foreground: 0.95 0.01 220;
+    /* glass card */
+    --card: 0.15 0.035 262;
+    --card-foreground: 0.95 0.01 220;
+    --popover: 0.14 0.04 262;
+    --popover-foreground: 0.95 0.01 220;
+    /* Blue primary #3b82f6 */
+    --primary: 0.62 0.21 262;
+    --primary-foreground: 1 0 0;
+    /* secondary */
+    --secondary: 0.18 0.04 262;
+    --secondary-foreground: 0.85 0.01 220;
+    --muted: 0.17 0.03 262;
+    --muted-foreground: 0.6 0.02 220;
+    --accent: 0.7 0.17 162;
+    --accent-foreground: 0.11 0.04 262;
+    --destructive: 0.55 0.22 27;
+    --destructive-foreground: 1 0 0;
+    --border: 0.25 0.03 262;
+    --input: 0.2 0.04 262;
+    --ring: 0.62 0.21 262;
+    --success: 0.7 0.17 162;
+    --success-foreground: 0.11 0 0;
+    --warning: 0.78 0.19 75;
+    --warning-foreground: 0.11 0 0;
+    --chart-1: 0.62 0.21 262;
+    --chart-2: 0.7 0.17 162;
+    --chart-3: 0.75 0.19 75;
+    --chart-4: 0.55 0.22 27;
+    --chart-5: 0.65 0.18 300;
+    --sidebar: 0.13 0.04 262;
+    --sidebar-foreground: 0.85 0.01 220;
+    --sidebar-primary: 0.62 0.21 262;
+    --sidebar-primary-foreground: 1 0 0;
+    --sidebar-accent: 0.18 0.04 262;
+    --sidebar-accent-foreground: 0.9 0.01 220;
+    --sidebar-border: 0.22 0.03 262;
+    --sidebar-ring: 0.62 0.21 262;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: "Figtree", "Plus Jakarta Sans", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: "BricolageGrotesque", system-ui, sans-serif;
+  }
+}
+
+@layer utilities {
+  .glass {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .glass-dark {
+    background: rgba(10, 15, 30, 0.7);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .gradient-text {
+    background: linear-gradient(135deg, #3b82f6, #10b981);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .gradient-bg {
+    background: linear-gradient(135deg, #3b82f6, #10b981);
+  }
+
+  .glow-blue {
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.35);
+  }
+
+  .glow-green {
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.35);
+  }
+
+  .glow-red {
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.35);
+  }
+
+  .timer-ring {
+    filter: drop-shadow(0 0 16px rgba(59, 130, 246, 0.6));
+  }
+}
