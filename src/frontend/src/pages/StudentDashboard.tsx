@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { AnimatePresence, motion } from "motion/react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Bar,
   BarChart,
@@ -22,6 +22,7 @@ import { type FCClassroom, storage } from "../utils/storage";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const WEEKS = ["Wk 1", "Wk 2", "Wk 3", "Wk 4"];
+const RECOVERY_KEY = "fc_recovery_session";
 
 const NAV_ITEMS = [
   { id: "home", label: "Home", icon: "🏠" },
@@ -53,8 +54,60 @@ export default function StudentDashboard() {
   const [showSelfStudyPicker, setShowSelfStudyPicker] = useState(false);
   const [customMinutes, setCustomMinutes] = useState("");
 
+  // Recovery popup
+  const [recoveryData, setRecoveryData] = useState<null | {
+    timerEnd: number;
+    duration: number;
+    startedAt: number;
+    blockedApps: string[];
+  }>(null);
+
   const classroom = getStudentClassroom();
   const session = classroom?.activeSession ?? null;
+
+  // Track previous session to detect teacher stopping it
+  const prevSessionRef = useRef<typeof session>(session);
+  useEffect(() => {
+    const prev = prevSessionRef.current;
+    prevSessionRef.current = session;
+    // If there WAS a session and now there isn't — teacher ended it
+    if (prev && !session) {
+      toast.success("🎬 Session ended by teacher. Great work! +10 XP");
+      setActivePage("home");
+    }
+  }, [session]);
+
+  // Auto-recovery: check localStorage on mount
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(RECOVERY_KEY);
+      if (raw) {
+        const data = JSON.parse(raw);
+        const isForThisUser = !data.userId || data.userId === currentUser?.id;
+        const isNotExpired = data.timerEnd > Date.now();
+        if (isForThisUser && isNotExpired) {
+          setRecoveryData(data);
+        } else {
+          localStorage.removeItem(RECOVERY_KEY);
+        }
+      }
+    } catch {
+      localStorage.removeItem(RECOVERY_KEY);
+    }
+  }, [currentUser?.id]);
+
+  const handleResumeRecovery = () => {
+    if (!recoveryData) return;
+    setSelfStudyDuration(recoveryData.duration);
+    setSelfStudyTimerEnd(recoveryData.timerEnd);
+    setSelfStudyActive(true);
+    setRecoveryData(null);
+  };
+
+  const handleDismissRecovery = () => {
+    localStorage.removeItem(RECOVERY_KEY);
+    setRecoveryData(null);
+  };
 
   // Self-study mock classroom for FocusModeOverlay
   const selfStudyMockClassroom: FCClassroom = {
@@ -83,21 +136,22 @@ export default function StudentDashboard() {
   };
 
   const handleStopSelfStudy = () => {
-    const elapsedMs =
-      Date.now() - (selfStudyTimerEnd - selfStudyDuration * 60 * 1000);
+    const startedAt = selfStudyTimerEnd - selfStudyDuration * 60 * 1000;
+    const elapsedMs = Date.now() - startedAt;
     const minutesStudied = Math.max(1, Math.floor(elapsedMs / 60000));
     if (currentUser) {
       const { newBadges } = recordSelfStudySession(
         currentUser.id,
         minutesStudied,
       );
-      toast.success("Self-study complete! +10 XP earned 🎯");
+      toast.success("🎉 Session complete! +10 XP earned 🎯");
       for (const badgeId of newBadges) {
         const badge = BADGE_DEFS.find((b) => b.id === badgeId);
         if (badge) toast.success(`Badge unlocked: ${badge.name} ${badge.icon}`);
       }
     }
     setSelfStudyActive(false);
+    setActivePage("home");
   };
 
   const handleJoin = async () => {
@@ -141,7 +195,6 @@ export default function StudentDashboard() {
     .sort((a, b) => (b.xp || 0) - (a.xp || 0))
     .slice(0, 10);
 
-  // Self-study sessions count for display
   const selfStudySessions = storage
     .getSelfStudySessions()
     .filter((s) => s.userId === currentUser?.id);
@@ -153,7 +206,16 @@ export default function StudentDashboard() {
     >
       {/* Focus mode overlays */}
       <AnimatePresence>
-        {session && classroom && <FocusModeOverlay classroom={classroom} />}
+        {session && classroom && (
+          <FocusModeOverlay
+            classroom={classroom}
+            onStop={() => {
+              // Classroom exit: just dismiss overlay (teacher controls session)
+              toast("You've left focus mode.");
+              setActivePage("home");
+            }}
+          />
+        )}
       </AnimatePresence>
       <AnimatePresence>
         {selfStudyActive && !session && (
@@ -162,6 +224,56 @@ export default function StudentDashboard() {
             isSelfStudy
             onStop={handleStopSelfStudy}
           />
+        )}
+      </AnimatePresence>
+
+      {/* Recovery popup */}
+      <AnimatePresence>
+        {recoveryData && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center px-4"
+            style={{ background: "rgba(0,0,0,0.7)" }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="rounded-2xl p-6 w-full max-w-sm text-center"
+              style={{
+                background: "rgba(13,18,40,0.98)",
+                border: "1px solid rgba(255,255,255,0.12)",
+              }}
+            >
+              <div className="text-4xl mb-3">🔄</div>
+              <h3 className="font-heading font-bold text-lg mb-2">
+                Resume Previous Session?
+              </h3>
+              <p className="text-sm text-muted-foreground mb-5">
+                You have an unfinished self-study session. Would you like to
+                resume it?
+              </p>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={handleDismissRecovery}
+                  className="flex-1 py-2.5 rounded-xl bg-white/10 border border-white/20 text-white/70 font-semibold text-sm hover:bg-white/15 transition-all"
+                >
+                  Start New
+                </button>
+                <button
+                  type="button"
+                  data-ocid="student.recovery.resume_button"
+                  onClick={handleResumeRecovery}
+                  className="flex-1 py-2.5 rounded-xl bg-green-500/20 border border-green-500/40 text-green-300 font-semibold text-sm hover:bg-green-500/30 transition-all"
+                >
+                  ▶️ Resume
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
 
@@ -412,7 +524,7 @@ export default function StudentDashboard() {
                   </div>
                 )}
 
-                {/* Self Study section – only when no class session */}
+                {/* Self Study section */}
                 {!session && !selfStudyActive && (
                   <div className="glass rounded-2xl p-5">
                     <h3 className="font-heading font-semibold mb-3">
